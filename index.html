@@ -168,13 +168,13 @@
   </header>
 
   <div class="container">
-    <!-- Token d'accès -->
+    <!-- Jeton d'authentification -->
     <div class="form-group">
       <label for="hfToken">Jeton Hugging Face (HF)</label>
       <input type="password" id="hfToken" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxx">
     </div>
 
-    <!-- Zone d'import d'image -->
+    <!-- Zone d'importation de l'image -->
     <div class="form-group">
       <label>Image Source</label>
       <div class="dropzone" id="dropzone">
@@ -183,21 +183,21 @@
       </div>
     </div>
 
-    <!-- Affichage de l'image -->
+    <!-- Conteneur d'affichage de l'image chargée / modifiée -->
     <div class="preview-container" id="previewContainer">
       <img id="imagePreview" src="" alt="Aperçu">
     </div>
 
-    <!-- Prompt textuel -->
+    <!-- Prompt de modification -->
     <div class="form-group" style="margin-top: 16px;">
       <label for="promptInput">Instruction de modification</label>
       <input type="text" id="promptInput" placeholder="ex: Change the blue shirt to red silk fabric">
     </div>
 
-    <!-- Actions -->
+    <!-- Bouton d'action principal -->
     <button id="processBtn" disabled>Lancer la transformation</button>
 
-    <!-- Logs de suivi -->
+    <!-- Zone de suivi des logs et statuts -->
     <div class="status-log" id="statusLog"></div>
   </div>
 
@@ -213,20 +213,23 @@
 
     let base64Image = null;
 
-    // Gestion de l'import d'image
+    // Gestion du clic sur la zone de dépôt
     dropzone.addEventListener('click', () => fileInput.click());
     
+    // Détection du fichier sélectionné
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) handleFile(file);
     });
 
+    // Fonction d'affichage des statuts de suivi
     function log(message) {
       statusLog.style.display = 'block';
       statusLog.innerHTML += `<div>> ${message}</div>`;
       statusLog.scrollTop = statusLog.scrollHeight;
     }
 
+    // Lecture du fichier en Base64 comme avant
     function handleFile(file) {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -239,6 +242,7 @@
       reader.readAsDataURL(file);
     }
 
+    // Vérification de la complétion du formulaire
     function checkFormValidity() {
       if (base64Image && promptInput.value.trim() !== "" && hfTokenInput.value.trim() !== "") {
         processBtn.disabled = false;
@@ -251,13 +255,13 @@
       input.addEventListener('input', checkFormValidity);
     });
 
-    // Appel à l'API via le nouveau Proxy Vercel
+    // Envoi de la requête au proxy Vercel amélioré avec retry automatique
     async function callHfWithRetry(dataUrl, instruction, token, retries = 2) {
       for (let i = 0; i <= retries; i++) {
         try {
           log(`Tentative ${i + 1}/${retries + 1}...`);
           
-          // Route modifiée pour pointer vers l'API Vercel (/api/hf-proxy)
+          // La route pointe maintenant sur ton API Vercel améliorée
           const resp = await fetch('/api/hf-proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -285,7 +289,7 @@
       }
     }
 
-    // Déclenchement du traitement
+    // Gestion du clic de lancement
     processBtn.addEventListener('click', async () => {
       const prompt = promptInput.value.trim();
       const token = hfTokenInput.value.trim();
@@ -298,7 +302,7 @@
 
       try {
         const resultUrl = await callHfWithRetry(base64Image, prompt, token);
-        log("Transformation réussie ! Affichage de l'image.");
+        log("Transformation réussie ! Affichage du résultat.");
         imagePreview.src = resultUrl;
       } catch (err) {
         log(`Erreur critique : ${err.message}`);

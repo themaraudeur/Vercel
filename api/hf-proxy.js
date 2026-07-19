@@ -2,7 +2,7 @@ const MODEL = 'timbrooks/instruct-pix2pix';
 const HF_URL = `https://api-inference.huggingface.co/models/${MODEL}`;
 
 export default async function handler(req, res) {
-  // Gestion des requêtes CORS / Preflight
+  // Gestion des en-têtes CORS (comme sur ton ancien setup)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -12,18 +12,20 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).send('Method not allowed');
+    return res.status(405).send('Méthode non autorisée');
   }
-
-  const { image, prompt, token } = req.body;
-  if (!image || !prompt || !token) {
-    return res.status(400).send('Missing image, prompt, or token');
-  }
-
-  // Nettoyage du préfixe Base64 si existant
-  const base64 = image.includes(',') ? image.split(',')[1] : image;
 
   try {
+    const { image, prompt, token } = req.body;
+
+    if (!image || !prompt || !token) {
+      return res.status(400).send('Données manquantes (image, prompt ou token)');
+    }
+
+    // Nettoyage standard du Base64
+    const base64Data = image.includes(',') ? image.split(',')[1] : image;
+
+    // Appel direct à Hugging Face
     const hfResp = await fetch(HF_URL, {
       method: 'POST',
       headers: {
@@ -31,7 +33,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        inputs: base64,
+        inputs: base64Data,
         parameters: {
           prompt: prompt,
           num_inference_steps: 20,
@@ -42,17 +44,19 @@ export default async function handler(req, res) {
 
     if (!hfResp.ok) {
       const errText = await hfResp.text();
-      return res.status(hfResp.status).send(errText || `Hugging Face a répondu ${hfResp.status}`);
+      return res.status(hfResp.status).send(errText || `Erreur HF: ${hfResp.status}`);
     }
 
-    const contentType = hfResp.headers.get('content-type') || 'image/jpeg';
+    // Récupération de l'image renvoyée par le modèle
     const arrayBuffer = await hfResp.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Renvoi de l'image traitée avec le bon Content-Type
+    const contentType = hfResp.headers.get('content-type') || 'image/jpeg';
     res.setHeader('Content-Type', contentType);
     return res.status(200).send(buffer);
 
   } catch (err) {
-    return res.status(500).send('Erreur proxy : ' + err.message);
+    return res.status(500).send('Erreur Proxy: ' + err.message);
   }
 }

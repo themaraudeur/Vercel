@@ -1,316 +1,757 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Swatch·Lab - Studio Mode</title>
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>SWATCH·LAB — Recoloration &amp; retouche de vêtements</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0c0e;
+    --panel:#12161a;
+    --panel-2:#171c21;
+    --line:#232a30;
+    --text:#dfe6e6;
+    --text-dim:#8a9598;
+    --teal:#2ee6b8;
+    --magenta:#ff4d8d;
+    --amber:#ffb020;
+    --radius:3px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;}
+  body{padding-bottom:40px;}
+  ::selection{background:var(--teal);color:#04110d;}
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+  /* ---- Header ---- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(10,12,14,0.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{
+    width:26px;height:26px; border:1.5px solid var(--teal); border-radius:50%;
+    position:relative; flex-shrink:0;
+  }
+  .brand-mark::before,.brand-mark::after{
+    content:''; position:absolute; background:var(--teal);
+  }
+  .brand-mark::before{ top:50%; left:50%; width:14px; height:1.5px; transform:translate(-50%,-50%);}
+  .brand-mark::after{ top:50%; left:50%; width:1.5px; height:14px; transform:translate(-50%,-50%);}
+  .brand-name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px; letter-spacing:0.06em;}
+  .brand-name span{color:var(--teal);}
+  .brand-sub{font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-dim); letter-spacing:0.08em; margin-top:1px;}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
+  main{max-width:720px; margin:0 auto; padding:16px;}
 
-    header {
-      margin-bottom: 24px;
-      text-align: center;
-    }
+  /* ---- Upload zone ---- */
+  .dropzone{
+    border:1.5px dashed var(--line); border-radius:var(--radius);
+    padding:36px 16px; text-align:center; cursor:pointer;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    transition:border-color .15s;
+  }
+  .dropzone.drag{border-color:var(--teal);}
+  .dropzone-icon{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--teal); letter-spacing:0.15em; margin-bottom:10px;}
+  .dropzone h2{font-family:'Space Grotesk',sans-serif; font-size:17px; margin:0 0 6px;}
+  .dropzone p{color:var(--text-dim); font-size:12.5px; margin:0;}
+  input[type=file]{display:none;}
 
-    h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.05em;
-      margin-bottom: 4px;
-    }
+  /* ---- Stage (photo + overlay) ---- */
+  .stage{position:relative; margin-top:14px; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:#000; display:none;}
+  .stage.active{display:block;}
+  #stageCanvas{width:100%; display:block;}
+  .scan-line{
+    position:absolute; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--teal), transparent);
+    box-shadow:0 0 12px var(--teal);
+    animation:scan 1.6s linear infinite;
+    display:none;
+  }
+  .scan-line.active{display:block;}
+  @keyframes scan{ 0%{top:0%} 100%{top:100%} }
+  .stage-readout{
+    position:absolute; bottom:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:6px 10px; background:rgba(10,12,14,0.75);
+    font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--teal);
+    letter-spacing:0.04em; pointer-events:none;
+  }
 
-    h1 span {
-      color: var(--accent);
-    }
+  /* ---- Region chips ---- */
+  .regions{display:none; margin-top:14px;}
+  .regions.active{display:block;}
+  .section-label{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim);
+    letter-spacing:0.14em; text-transform:uppercase; margin-bottom:8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .section-label::after{content:''; flex:1; height:1px; background:var(--line);}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px;
+    padding:7px 12px; border:1px solid var(--line); border-radius:20px;
+    background:var(--panel); color:var(--text); cursor:pointer;
+    display:flex; align-items:center; gap:6px; transition:.12s;
+  }
+  .chip:active{transform:scale(0.96);}
+  .chip.selected{border-color:var(--teal); color:var(--teal); background:rgba(46,230,184,0.08);}
+  .chip .dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim); flex-shrink:0;}
+  .chip.selected .dot{background:var(--teal); box-shadow:0 0 6px var(--teal);}
 
-    p.subtitle {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
+  /* ---- Mode tabs ---- */
+  .tabs{display:none; margin-top:18px; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+  .tabs.active{display:flex;}
+  .tab{
+    flex:1; text-align:center; padding:11px 8px; cursor:pointer;
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13px;
+    color:var(--text-dim); background:var(--panel); border:none;
+    border-right:1px solid var(--line);
+  }
+  .tab:last-child{border-right:none;}
+  .tab.active{color:var(--bg); background:var(--teal);}
 
-    .container {
-      width: 100%;
-      max-width: 500px;
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
-    }
+  .panel{display:none; margin-top:14px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); padding:16px;}
+  .panel.active{display:block;}
 
-    .form-group {
-      margin-bottom: 16px;
-    }
+  .field-label{font-size:12px; color:var(--text-dim); margin-bottom:8px; display:block;}
+  .swatch-strip{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;}
+  .swatch{
+    width:34px; height:34px; border-radius:50%; cursor:pointer;
+    border:2px solid transparent; transition:.12s; position:relative;
+  }
+  .swatch.selected{border-color:#fff; transform:scale(1.08);}
+  .swatch.selected::after{
+    content:''; position:absolute; inset:-5px; border:1px solid var(--teal); border-radius:50%;
+  }
+  input[type=color]{
+    width:44px; height:34px; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--panel-2); cursor:pointer; padding:2px;
+  }
+  .color-row{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
 
-    label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
+  .slider-row{margin-bottom:14px;}
+  .slider-row .head{display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:6px;}
+  .slider-row .head b{color:var(--teal); font-family:'IBM Plex Mono',monospace; font-weight:500;}
+  input[type=range]{
+    width:100%; -webkit-appearance:none; height:2px; background:var(--line); border-radius:2px; outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
+    background:var(--teal); cursor:pointer; box-shadow:0 0 8px rgba(46,230,184,0.5);
+  }
 
-    input[type="text"], input[type="password"] {
-      width: 100%;
-      padding: 12px;
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      color: white;
-      font-size: 0.95rem;
-      transition: border-color 0.2s;
-    }
+  textarea, input[type=text]{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    border-radius:var(--radius); padding:10px 12px; font-family:'IBM Plex Sans',sans-serif; font-size:13.5px;
+    resize:vertical;
+  }
+  textarea:focus, input:focus{outline:none; border-color:var(--teal);}
 
-    input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
+  .btn{
+    width:100%; padding:13px; border:none; border-radius:var(--radius);
+    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14px;
+    cursor:pointer; letter-spacing:0.02em; margin-top:4px;
+  }
+  .btn-primary{background:var(--teal); color:#04110d;}
+  .btn-primary:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
+  .btn-ghost{background:transparent; border:1px solid var(--line); color:var(--text); margin-top:8px;}
+  .btn-magenta{background:var(--magenta); color:#1a0510;}
+  .btn-magenta:disabled{background:var(--line); color:var(--text-dim); cursor:not-allowed;}
 
-    .dropzone {
-      border: 2px dashed #334155;
-      border-radius: 12px;
-      padding: 30px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
-      background: #0f172a;
-    }
+  .hint{font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.5;}
+  .hint b{color:var(--amber);}
+  .hint a{color:var(--teal);}
 
-    .dropzone:hover {
-      border-color: var(--accent);
-      background: #141e33;
-    }
+  .status{
+    margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    color:var(--text-dim); display:flex; align-items:center; gap:8px; min-height:16px;
+  }
+  .status .led{width:7px; height:7px; border-radius:50%; background:var(--line); flex-shrink:0;}
+  .status.busy .led{background:var(--amber); box-shadow:0 0 6px var(--amber); animation:pulse 1s infinite;}
+  .status.ok .led{background:var(--teal); box-shadow:0 0 6px var(--teal);}
+  .status.err .led{background:var(--magenta); box-shadow:0 0 6px var(--magenta);}
+  @keyframes pulse{ 50%{opacity:0.35} }
 
-    .preview-container {
-      margin-top: 20px;
-      position: relative;
-      width: 100%;
-      border-radius: 12px;
-      overflow: hidden;
-      display: none;
-      background: #000;
-    }
+  .result-actions{display:none; margin-top:14px; gap:10px;}
+  .result-actions.active{display:flex;}
+  .result-actions .btn{margin-top:0;}
 
-    .preview-container img {
-      width: 100%;
-      display: block;
-      height: auto;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      background: var(--accent);
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-weight: 600;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-      margin-top: 10px;
-    }
-
-    button:hover {
-      background: var(--accent-hover);
-    }
-
-    button:disabled {
-      background: #334155;
-      color: var(--text-muted);
-      cursor: not-allowed;
-    }
-
-    .status-log {
-      margin-top: 16px;
-      font-family: monospace;
-      font-size: 0.8rem;
-      padding: 10px;
-      background: #0f172a;
-      border-radius: 6px;
-      max-height: 100px;
-      overflow-y: auto;
-      color: #38bdf8;
-      display: none;
-    }
-  </style>
+  footer{max-width:720px; margin:30px auto 0; padding:0 16px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); text-align:center; letter-spacing:0.05em;}
+</style>
 </head>
 <body>
 
-  <header>
-    <h1>Swatch<span>·Lab</span></h1>
-    <p class="subtitle">Recoloration & Modification de Tissus</p>
-  </header>
-
-  <div class="container">
-    <!-- Jeton d'authentification -->
-    <div class="form-group">
-      <label for="hfToken">Jeton Hugging Face (HF)</label>
-      <input type="password" id="hfToken" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxx">
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div>
+      <div class="brand-name">SWATCH<span>·</span>LAB</div>
+      <div class="brand-sub">RECOLOR // RESTYLE — 100% GRATUIT</div>
     </div>
+  </div>
+</header>
 
-    <!-- Zone d'importation de l'image -->
-    <div class="form-group">
-      <label>Image Source</label>
-      <div class="dropzone" id="dropzone">
-        <p id="dropzoneText">Glisse une image ici ou clique pour choisir</p>
-        <input type="file" id="fileInput" accept="image/*" style="display: none;">
-      </div>
-    </div>
+<main>
 
-    <!-- Conteneur d'affichage de l'image chargée / modifiée -->
-    <div class="preview-container" id="previewContainer">
-      <img id="imagePreview" src="" alt="Aperçu">
-    </div>
-
-    <!-- Prompt de modification -->
-    <div class="form-group" style="margin-top: 16px;">
-      <label for="promptInput">Instruction de modification</label>
-      <input type="text" id="promptInput" placeholder="ex: Change the blue shirt to red silk fabric">
-    </div>
-
-    <!-- Bouton d'action principal -->
-    <button id="processBtn" disabled>Lancer la transformation</button>
-
-    <!-- Zone de suivi des logs et statuts -->
-    <div class="status-log" id="statusLog"></div>
+  <div class="dropzone" id="dropzone">
+    <div class="dropzone-icon">◆ ◇ ◆</div>
+    <h2>Dépose une photo</h2>
+    <p>Un vêtement porté ou à plat — jpg, png, webp. Tout se passe dans ton téléphone.</p>
+    <input type="file" id="fileInput" accept="image/*">
   </div>
 
-  <script type="module">
-    const fileInput = document.getElementById('fileInput');
-    const dropzone = document.getElementById('dropzone');
-    const imagePreview = document.getElementById('imagePreview');
-    const previewContainer = document.getElementById('previewContainer');
-    const processBtn = document.getElementById('processBtn');
-    const promptInput = document.getElementById('promptInput');
-    const hfTokenInput = document.getElementById('hfToken');
-    const statusLog = document.getElementById('statusLog');
+  <div class="stage" id="stage">
+    <canvas id="stageCanvas"></canvas>
+    <div class="scan-line" id="scanLine"></div>
+    <div class="stage-readout" id="stageReadout">
+      <span id="readoutLeft">EN ATTENTE</span>
+      <span id="readoutRight">—</span>
+    </div>
+  </div>
 
-    let base64Image = null;
+  <div class="status" id="segStatus"></div>
 
-    // Gestion du clic sur la zone de dépôt
-    dropzone.addEventListener('click', () => fileInput.click());
-    
-    // Détection du fichier sélectionné
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleFile(file);
-    });
+  <div class="regions" id="regions">
+    <div class="section-label">Zones détectées</div>
+    <div class="chip-row" id="chipRow"></div>
+    <p class="hint" style="margin-top:10px;">👆 Le nom donné par l'IA peut être imprécis (plis, ombres). <b>Touche directement le vêtement sur la photo</b> pour sélectionner la bonne zone, quel que soit son nom.</p>
+    <div class="slider-row" style="margin-top:14px;">
+      <div class="head"><span>Étendre la zone (en plus du renforcement automatique)</span><b id="growVal">2px</b></div>
+      <input type="range" id="growSlider" min="0" max="16" value="2">
+    </div>
+  </div>
 
-    // Fonction d'affichage des statuts de suivi
-    function log(message) {
-      statusLog.style.display = 'block';
-      statusLog.innerHTML += `<div>> ${message}</div>`;
-      statusLog.scrollTop = statusLog.scrollHeight;
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="recolor">Recolorer</button>
+    <button class="tab" data-tab="change">Changer</button>
+  </div>
+
+  <!-- RECOLOR PANEL -->
+  <div class="panel active" id="panel-recolor">
+    <span class="field-label">Nouvelle teinte</span>
+    <div class="swatch-strip" id="swatchStrip"></div>
+    <div class="color-row">
+      <input type="color" id="colorPicker" value="#2ee6b8">
+      <span class="hint" style="margin:0;">Ou choisis une teinte précise ↑</span>
+    </div>
+
+    <div class="slider-row">
+      <div class="head"><span>Vivacité de la couleur</span><b id="satVal">100%</b></div>
+      <input type="range" id="satSlider" min="0" max="100" value="100">
+    </div>
+    <div class="slider-row">
+      <div class="head"><span>Uniformiser (réduit l'effet délavé sur les zones claires/sombres)</span><b id="uniformVal">45%</b></div>
+      <input type="range" id="uniformSlider" min="0" max="100" value="45">
+    </div>
+    <div class="slider-row">
+      <div class="head"><span>Luminosité</span><b id="lightVal">0</b></div>
+      <input type="range" id="lightSlider" min="-40" max="40" value="0">
+    </div>
+
+    <button class="btn btn-primary" id="applyRecolor" disabled>Appliquer la couleur</button>
+    <p class="hint">Remplacement plein et opaque de la couleur dans toute la zone détectée — les plis restent visibles en relief, sans laisser l'ancienne couleur transparaître.</p>
+  </div>
+
+  <!-- CHANGE PANEL -->
+  <div class="panel" id="panel-change">
+    <span class="field-label">Décris le nouveau vêtement</span>
+    <textarea id="changePrompt" rows="2" placeholder="ex. une veste en cuir noir, un pull à col roulé rouge, une robe à fleurs..."></textarea>
+
+    <button class="btn btn-magenta" id="applyChange" disabled>Générer le nouveau vêtement</button>
+    <p class="hint">Utilise le modèle gratuit <b>InstructPix2Pix</b> via ton proxy serveur sécurisé, puis recompose le résultat uniquement sur la zone sélectionnée. Le premier appel peut prendre 20-40s le temps que le modèle "se réveille".</p>
+  </div>
+
+  <div class="status" id="genStatus"></div>
+
+  <div class="result-actions" id="resultActions">
+    <button class="btn btn-ghost" id="resetBtn">↺ Recommencer</button>
+    <button class="btn btn-primary" id="downloadBtn">↓ Télécharger</button>
+  </div>
+
+</main>
+
+<footer>SWATCH·LAB — segmentation locale (transformers.js) + Vercel Proxy API</footer>
+
+<script type="module">
+const segWorker = new Worker('seg-worker.js', { type: 'module' });
+
+const GARMENT_LABELS = ['Hat','Upper-clothes','Skirt','Pants','Dress','Belt','Left-shoe','Right-shoe','Bag','Scarf','Sunglasses'];
+const LABEL_FR = {
+  'Hat':'Chapeau','Upper-clothes':'Haut','Skirt':'Jupe','Pants':'Pantalon','Dress':'Robe',
+  'Belt':'Ceinture','Left-shoe':'Chaussure G','Right-shoe':'Chaussure D','Bag':'Sac','Scarf':'Écharpe','Sunglasses':'Lunettes'
+};
+
+const PRESET_COLORS = ['#ff4d8d','#2ee6b8','#ffb020','#5b8cff','#ffffff','#111111','#8b5cf6','#e11d48','#22c55e','#f59e0b'];
+
+let originalImg = null;
+let baseCanvas = document.getElementById('stageCanvas');
+let ctx = baseCanvas.getContext('2d', { willReadFrequently: true });
+let originalImageData = null;
+let masks = {};
+let selectedLabel = null;
+let selectedColorHex = '#2ee6b8';
+
+const $ = id => document.getElementById(id);
+
+const swatchStrip = $('swatchStrip');
+PRESET_COLORS.forEach((hex,i) => {
+  const s = document.createElement('div');
+  s.className = 'swatch' + (i===1 ? ' selected' : '');
+  s.style.background = hex;
+  s.dataset.hex = hex;
+  s.onclick = () => {
+    document.querySelectorAll('.swatch').forEach(el=>el.classList.remove('selected'));
+    s.classList.add('selected');
+    selectedColorHex = hex;
+    $('colorPicker').value = hex;
+  };
+  swatchStrip.appendChild(s);
+});
+$('colorPicker').addEventListener('input', e => {
+  selectedColorHex = e.target.value;
+  document.querySelectorAll('.swatch').forEach(el=>el.classList.remove('selected'));
+});
+$('satSlider').addEventListener('input', e => $('satVal').textContent = e.target.value + '%');
+$('uniformSlider').addEventListener('input', e => $('uniformVal').textContent = e.target.value + '%');
+$('lightSlider').addEventListener('input', e => $('lightVal').textContent = e.target.value);
+$('growSlider').addEventListener('input', e => $('growVal').textContent = e.target.value + 'px');
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    $('panel-' + tab.dataset.tab).classList.add('active');
+  };
+});
+
+function setStatus(el, mode, text){
+  el.className = 'status ' + (mode||'');
+  el.innerHTML = '<span class="led"></span><span>' + text + '</span>';
+}
+
+const dropzone = $('dropzone');
+const fileInput = $('fileInput');
+dropzone.onclick = () => fileInput.click();
+['dragover','dragenter'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+['dragleave','drop'].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+dropzone.addEventListener('drop', e => { if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+async function handleFile(file){
+  if (!file.type.startsWith('image/')){
+    setStatus($('segStatus'),'err','Ce fichier n\'est pas une image.');
+    return;
+  }
+  if (file.size > 25*1024*1024){
+    setStatus($('segStatus'),'err','Photo trop lourde (>25 Mo). Choisis une photo plus légère.');
+    return;
+  }
+  try{
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    loadImage(bitmap);
+  } catch(e){
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => loadImage(img);
+      img.onerror = () => setStatus($('segStatus'),'err','Impossible de lire cette image.');
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function loadImage(img){
+  originalImg = img;
+  const MAX = 896;
+  let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  if (w > MAX || h > MAX){
+    const scale = MAX / Math.max(w,h);
+    w = Math.round(w*scale); h = Math.round(h*scale);
+  }
+  baseCanvas.width = w; baseCanvas.height = h;
+  ctx.drawImage(img, 0, 0, w, h);
+  originalImageData = ctx.getImageData(0,0,w,h);
+
+  $('stage').classList.add('active');
+  dropzone.style.display = 'none';
+  runSegmentation();
+}
+
+let segResolvers = null;
+
+segWorker.onmessage = (e) => {
+  const msg = e.data;
+  if (!segResolvers) return;
+
+  if (msg.type === 'stage') {
+    setStatus($('segStatus'), 'busy', msg.text);
+  } else if (msg.type === 'progress') {
+    setStatus($('segStatus'), 'busy', 'Téléchargement du modèle… ' + msg.pct + '%');
+  } else if (msg.type === 'done') {
+    segResolvers.resolve(msg);
+    segResolvers = null;
+  } else if (msg.type === 'error') {
+    segResolvers.reject(new Error(msg.message));
+    segResolvers = null;
+  }
+};
+segWorker.onerror = (e) => {
+  if (segResolvers) { segResolvers.reject(new Error(e.message || 'Erreur worker')); segResolvers = null; }
+};
+
+function segmentInWorker(dataUrl, width, height){
+  return new Promise((resolve, reject) => {
+    segResolvers = { resolve, reject };
+    segWorker.postMessage({ type: 'segment', dataUrl, width, height });
+  });
+}
+
+async function runSegmentation(){
+  $('scanLine').classList.add('active');
+  $('readoutLeft').textContent = 'CHARGEMENT DU MODÈLE…';
+  setStatus($('segStatus'), 'busy', 'Chargement du modèle de segmentation (première fois : ~10-15s)…');
+
+  try{
+    const { results, width: w, height: h } = await segmentInWorker(baseCanvas.toDataURL('image/png'), baseCanvas.width, baseCanvas.height);
+
+    masks = {};
+    const chipRow = $('chipRow');
+    chipRow.innerHTML = '';
+    let found = 0;
+
+    for (const item of results){
+      masks[item.label] = new Float32Array(item.buffer);
+      found++;
+
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.dataset.label = item.label;
+      chip.innerHTML = '<span class="dot"></span>' + (LABEL_FR[item.label] || item.label);
+      chip.onclick = () => selectRegion(item.label, chip);
+      chipRow.appendChild(chip);
     }
 
-    // Lecture du fichier en Base64 comme avant
-    function handleFile(file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        base64Image = event.target.result;
-        imagePreview.src = base64Image;
-        previewContainer.style.display = 'block';
-        document.getElementById('dropzoneText').innerText = `Fichier chargé : ${file.name}`;
-        checkFormValidity();
-      };
-      reader.readAsDataURL(file);
+    $('scanLine').classList.remove('active');
+
+    if (found === 0){
+      setStatus($('segStatus'), 'err', 'Aucun vêtement clairement détecté. Essaie une photo plus nette, cadrée sur la tenue.');
+      $('readoutLeft').textContent = 'AUCUNE ZONE';
+      return;
     }
 
-    // Vérification de la complétion du formulaire
-    function checkFormValidity() {
-      if (base64Image && promptInput.value.trim() !== "" && hfTokenInput.value.trim() !== "") {
-        processBtn.disabled = false;
-      } else {
-        processBtn.disabled = true;
-      }
+    $('readoutLeft').textContent = found + ' ZONE(S) DÉTECTÉE(S)';
+    $('readoutRight').textContent = w + '×' + h;
+    setStatus($('segStatus'), 'ok', found + ' zone(s) de vêtement détectée(s). Sélectionne-en une ci-dessous.');
+    $('regions').classList.add('active');
+    $('tabs').classList.add('active');
+
+    const firstChip = chipRow.querySelector('.chip');
+    if (firstChip) selectRegion(firstChip.dataset.label, firstChip);
+
+  } catch(err){
+    console.error(err);
+    $('scanLine').classList.remove('active');
+    setStatus($('segStatus'), 'err', 'Erreur de segmentation : ' + err.message);
+    $('readoutLeft').textContent = 'ERREUR';
+  }
+}
+
+function selectRegion(label, chipEl){
+  selectedLabel = label;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  if (chipEl) chipEl.classList.add('selected');
+  else {
+    const match = document.querySelector('.chip[data-label="'+label+'"]');
+    if (match) match.classList.add('selected');
+  }
+  $('applyRecolor').disabled = false;
+  $('applyChange').disabled = false;
+  checkChangeValidity();
+}
+
+function checkChangeValidity() {
+  if (selectedLabel && $('changePrompt').value.trim() !== "") {
+    $('applyChange').disabled = false;
+  } else {
+    $('applyChange').disabled = true;
+  }
+}
+$('changePrompt').addEventListener('input', checkChangeValidity);
+
+function dilateMask(arr, w, h, radius){
+  if (radius <= 0) return arr;
+  const tmp = new Float32Array(w*h);
+  const out = new Float32Array(w*h);
+  for (let y=0;y<h;y++){
+    const rowOff = y*w;
+    for (let x=0;x<w;x++){
+      let m = 0;
+      const x0 = Math.max(0,x-radius), x1 = Math.min(w-1,x+radius);
+      for (let xx=x0; xx<=x1; xx++){ const v = arr[rowOff+xx]; if (v>m) m=v; }
+      tmp[rowOff+x] = m;
     }
-
-    [promptInput, hfTokenInput].forEach(input => {
-      input.addEventListener('input', checkFormValidity);
-    });
-
-    // Envoi de la requête au proxy Vercel amélioré avec retry automatique
-    async function callHfWithRetry(dataUrl, instruction, token, retries = 2) {
-      for (let i = 0; i <= retries; i++) {
-        try {
-          log(`Tentative ${i + 1}/${retries + 1}...`);
-          
-          // La route pointe maintenant sur ton API Vercel améliorée
-          const resp = await fetch('/api/hf-proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              image: dataUrl, 
-              prompt: instruction, 
-              token: token 
-            })
-          });
-
-          if (!resp.ok) {
-            const errBody = await resp.text();
-            throw new Error(errBody || `Code erreur serveur: ${resp.status}`);
-          }
-
-          const blob = await resp.blob();
-          return URL.createObjectURL(blob);
-
-        } catch (err) {
-          log(`Échec : ${err.message}`);
-          if (i === retries) throw err;
-          log("Attente avant nouvelle tentative...");
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      }
+  }
+  for (let x=0;x<w;x++){
+    for (let y=0;y<h;y++){
+      let m = 0;
+      const y0 = Math.max(0,y-radius), y1 = Math.min(h-1,y+radius);
+      for (let yy=y0; yy<=y1; yy++){ const v = tmp[yy*w+x]; if (v>m) m=v; }
+      out[y*w+x] = m;
     }
+  }
+  return out;
+}
 
-    // Gestion du clic de lancement
-    processBtn.addEventListener('click', async () => {
-      const prompt = promptInput.value.trim();
-      const token = hfTokenInput.value.trim();
+function getEffectiveMask(label){
+  const base = masks[label];
+  if (!base) return null;
+  const grow = parseInt($('growSlider').value) || 0;
+  return dilateMask(base, baseCanvas.width, baseCanvas.height, grow);
+}
 
-      if (!base64Image || !prompt || !token) return;
+function pickLabelAtPixel(x, y){
+  const w = baseCanvas.width;
+  const i = y*w + x;
+  let bestLabel = null, bestVal = 0.35;
+  for (const label in masks){
+    const v = masks[label][i];
+    if (v > bestVal){ bestVal = v; bestLabel = label; }
+  }
+  return bestLabel;
+}
 
-      processBtn.disabled = true;
-      statusLog.innerHTML = "";
-      log("Initialisation de la requête...");
+function handleStageTap(clientX, clientY){
+  if (!Object.keys(masks).length) return;
+  const rect = baseCanvas.getBoundingClientRect();
+  const x = Math.round((clientX - rect.left) * (baseCanvas.width/rect.width));
+  const y = Math.round((clientY - rect.top) * (baseCanvas.height/rect.height));
+  if (x<0||y<0||x>=baseCanvas.width||y>=baseCanvas.height) return;
 
-      try {
-        const resultUrl = await callHfWithRetry(base64Image, prompt, token);
-        log("Transformation réussie ! Affichage du résultat.");
-        imagePreview.src = resultUrl;
-      } catch (err) {
-        log(`Erreur critique : ${err.message}`);
-      } finally {
-        processBtn.disabled = false;
-      }
-    });
-  </script>
+  const label = pickLabelAtPixel(x,y);
+  if (label){
+    selectRegion(label);
+    setStatus($('segStatus'),'ok','Zone sélectionnée par tap : ' + (LABEL_FR[label]||label) + '.');
+  } else {
+    setStatus($('segStatus'),'err','Aucun vêtement détecté à cet endroit précis — essaie un peu plus au centre de la pièce.');
+  }
+}
+$('stage').addEventListener('click', e => handleStageTap(e.clientX, e.clientY));
+
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0, s=0, l=(max+min)/2;
+  if (max!==min){
+    const d = max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h=(g-b)/d+(g<b?6:0); break;
+      case g: h=(b-r)/d+2; break;
+      case b: h=(r-g)/d+4; break;
+    }
+    h/=6;
+  }
+  return [h,s,l];
+}
+function hslToRgb(h,s,l){
+  let r,g,b;
+  if (s===0){ r=g=b=l; }
+  else{
+    const hue2rgb = (p,q,t)=>{
+      if (t<0) t+=1; if (t>1) t-=1;
+      if (t<1/6) return p+(q-p)*6*t;
+      if (t<1/2) return q;
+      if (t<2/3) return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    const q = l<0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l-q;
+    r = hue2rgb(p,q,h+1/3);
+    g = hue2rgb(p,q,h);
+    b = hue2rgb(p,q,h-1/3);
+  }
+  return [r*255,g*255,b*255];
+}
+function hexToRgb(hex){
+  const v = parseInt(hex.slice(1),16);
+  return [(v>>16)&255, (v>>8)&255, v&255];
+}
+
+$('applyRecolor').addEventListener('click', () => {
+  if (!selectedLabel || !masks[selectedLabel]) return;
+  const w = baseCanvas.width, h = baseCanvas.height;
+  const mask = getEffectiveMask(selectedLabel);
+  const vividness = parseInt($('satSlider').value) / 100;
+  const uniformity = parseInt($('uniformSlider').value) / 100;
+  const lightShift = parseInt($('lightSlider').value) / 100;
+  const [tr,tg,tb] = hexToRgb(selectedColorHex);
+  const [th, ts] = rgbToHsl(tr,tg,tb);
+  const targetSat = Math.min(1, ts * vividness);
+
+  const src = originalImageData;
+
+  let sumL = 0, sumW = 0;
+  for (let i=0;i<w*h;i++){
+    const m = mask[i];
+    if (m < 0.05) continue;
+    const idx = i*4;
+    const [,,l0] = rgbToHsl(src.data[idx], src.data[idx+1], src.data[idx+2]);
+    sumL += l0*m; sumW += m;
+  }
+  const avgL = sumW > 0 ? sumL/sumW : 0.5;
+
+  const out = ctx.createImageData(w,h);
+  out.data.set(src.data);
+
+  for (let i=0;i<w*h;i++){
+    const m = mask[i];
+    if (m < 0.02) continue;
+    const idx = i*4;
+    const r = src.data[idx], g = src.data[idx+1], b = src.data[idx+2];
+    const [,,l0] = rgbToHsl(r,g,b);
+    let newL = l0 + (avgL - l0)*uniformity + lightShift;
+    newL = Math.min(0.92, Math.max(0.08, newL));
+    const [nr,ng,nb] = hslToRgb(th, targetSat, newL);
+    const blend = Math.min(1, m * 1.6);
+    out.data[idx]   = r*(1-blend) + nr*blend;
+    out.data[idx+1] = g*(1-blend) + ng*blend;
+    out.data[idx+2] = b*(1-blend) + nb*blend;
+    out.data[idx+3] = 255;
+  }
+  ctx.putImageData(out, 0, 0);
+  showResultActions();
+  setStatus($('genStatus'), 'ok', 'Couleur appliquée sur "' + (LABEL_FR[selectedLabel]||selectedLabel) + '".');
+});
+
+// ---------- Route Vercel Proxy avec Retry Automatique ----------
+async function callHfWithRetry(dataUrl, instruction, attempt = 1){
+  const MAX_ATTEMPTS = 4;
+  setStatus($('genStatus'), 'busy',
+    attempt === 1
+      ? 'Envoi à l\'IA (InstructPix2Pix)…'
+      : `Le modèle démarre encore, nouvelle tentative ${attempt}/${MAX_ATTEMPTS}…`);
+
+  // Changement de l'URL pour pointer vers l'API Serverless de Vercel
+  const resp = await fetch('/api/hf-proxy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image: dataUrl, prompt: instruction })
+  });
+
+  if (resp.ok){
+    return await resp.blob();
+  }
+
+  const errTxt = await resp.text();
+  let waitSeconds = 15;
+  let isLoading = resp.status === 503;
+  try {
+    const parsed = JSON.parse(errTxt);
+    if (parsed.estimated_time) waitSeconds = Math.min(Math.ceil(parsed.estimated_time) + 2, 45);
+    if (parsed.error && /loading/i.test(parsed.error)) isLoading = true;
+  } catch(e) {}
+
+  if (isLoading && attempt < MAX_ATTEMPTS){
+    for (let s = waitSeconds; s > 0; s--){
+      setStatus($('genStatus'), 'busy', `Modèle en cours de démarrage sur les serveurs gratuits… reprise dans ${s}s`);
+      await sleep(1000);
+    }
+    return callHfWithRetry(dataUrl, instruction, attempt + 1);
+  }
+
+  throw new Error(errTxt || ('HTTP ' + resp.status));
+}
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+$('applyChange').addEventListener('click', async () => {
+  const promptTxt = $('changePrompt').value.trim();
+  if (!selectedLabel || !masks[selectedLabel]) return;
+  if (!promptTxt){ setStatus($('genStatus'),'err','Décris le vêtement que tu veux obtenir.'); return; }
+
+  const btn = $('applyChange');
+  btn.disabled = true;
+
+  try{
+    const instruction = 'change the ' + selectedLabel.toLowerCase().replace('-',' ') + ' to ' + promptTxt;
+    const w = baseCanvas.width, h = baseCanvas.height;
+
+    const currentDataUrl = baseCanvas.toDataURL('image/jpeg', 0.92);
+
+    const blob = await callHfWithRetry(currentDataUrl, instruction);
+    const genImg = await blobToImage(blob);
+
+    const tmp = document.createElement('canvas');
+    tmp.width = w; tmp.height = h;
+    const tctx = tmp.getContext('2d');
+    tctx.drawImage(genImg, 0, 0, w, h);
+    const genData = tctx.getImageData(0,0,w,h);
+
+    const cur = ctx.getImageData(0,0,w,h);
+    const mask = getEffectiveMask(selectedLabel);
+    for (let i=0;i<w*h;i++){
+      const m = mask[i];
+      if (m < 0.02) continue;
+      const idx = i*4;
+      cur.data[idx]   = cur.data[idx]*(1-m)   + genData.data[idx]*m;
+      cur.data[idx+1] = cur.data[idx+1]*(1-m) + genData.data[idx+1]*m;
+      cur.data[idx+2] = cur.data[idx+2]*(1-m) + genData.data[idx+2]*m;
+    }
+    ctx.putImageData(cur, 0, 0);
+    originalImageData = ctx.getImageData(0,0,w,h);
+
+    setStatus($('genStatus'),'ok','Vêtement modifié. Tu peux enchaîner avec une recoloration.');
+    showResultActions();
+  } catch(err){
+    console.error(err);
+    let msg = err.message || String(err);
+    if (msg.includes('503') || msg.toLowerCase().includes('loading')){
+      msg = 'Le modèle se réveille sur les serveurs gratuits Hugging Face — relance dans 20-30s.';
+    }
+    setStatus($('genStatus'),'err','Échec : ' + msg);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+function blobToImage(blob){
+  return new Promise((resolve,reject)=>{
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function showResultActions(){
+  $('resultActions').classList.add('active');
+}
+$('downloadBtn').addEventListener('click', () => {
+  const link = document.createElement('a');
+  link.download = 'swatchlab-' + Date.now() + '.png';
+  link.href = baseCanvas.toDataURL('image/png');
+  link.click();
+});
+$('resetBtn').addEventListener('click', () => {
+  location.reload();
+});
+
+$('stage').addEventListener('mousemove', e => {
+  const rect = baseCanvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left) * (baseCanvas.width/rect.width));
+  const y = Math.round((e.clientY - rect.top) * (baseCanvas.height/rect.height));
+  if (x<0||y<0||x>=baseCanvas.width||y>=baseCanvas.height) return;
+  const px = ctx.getImageData(x,y,1,1).data;
+  $('readoutRight').textContent = `RGB ${px[0]},${px[1]},${px[2]}`;
+});
+</script>
 </body>
 </html>
 

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swatch·Lab - Studio Mode</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      margin-bottom: 4px;
+    }
+
+    h1 span {
+      color: var(--accent);
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: white;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .dropzone {
+      border: 2px dashed #334155;
+      border-radius: 12px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      background: #0f172a;
+    }
+
+    .dropzone:hover {
+      border-color: var(--accent);
+      background: #141e33;
+    }
+
+    .preview-container {
+      margin-top: 20px;
+      position: relative;
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+      background: #000;
+    }
+
+    .preview-container img {
+      width: 100%;
+      display: block;
+      height: auto;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: var(--accent-hover);
+    }
+
+    button:disabled {
+      background: #334155;
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .status-log {
+      margin-top: 16px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      padding: 10px;
+      background: #0f172a;
+      border-radius: 6px;
+      max-height: 100px;
+      overflow-y: auto;
+      color: #38bdf8;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Swatch<span>·Lab</span></h1>
+    <p class="subtitle">Recoloration & Modification de Tissus</p>
+  </header>
+
+  <div class="container">
+    <!-- Token d'accès -->
+    <div class="form-group">
+      <label for="hfToken">Jeton Hugging Face (HF)</label>
+      <input type="password" id="hfToken" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxx">
+    </div>
+
+    <!-- Zone d'import d'image -->
+    <div class="form-group">
+      <label>Image Source</label>
+      <div class="dropzone" id="dropzone">
+        <p id="dropzoneText">Glisse une image ici ou clique pour choisir</p>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+      </div>
+    </div>
+
+    <!-- Affichage de l'image -->
+    <div class="preview-container" id="previewContainer">
+      <img id="imagePreview" src="" alt="Aperçu">
+    </div>
+
+    <!-- Prompt textuel -->
+    <div class="form-group" style="margin-top: 16px;">
+      <label for="promptInput">Instruction de modification</label>
+      <input type="text" id="promptInput" placeholder="ex: Change the blue shirt to red silk fabric">
+    </div>
+
+    <!-- Actions -->
+    <button id="processBtn" disabled>Lancer la transformation</button>
+
+    <!-- Logs de suivi -->
+    <div class="status-log" id="statusLog"></div>
+  </div>
+
+  <script type="module">
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewContainer = document.getElementById('previewContainer');
+    const processBtn = document.getElementById('processBtn');
+    const promptInput = document.getElementById('promptInput');
+    const hfTokenInput = document.getElementById('hfToken');
+    const statusLog = document.getElementById('statusLog');
+
+    let base64Image = null;
+
+    // Gestion de l'import d'image
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleFile(file);
+    });
+
+    function log(message) {
+      statusLog.style.display = 'block';
+      statusLog.innerHTML += `<div>> ${message}</div>`;
+      statusLog.scrollTop = statusLog.scrollHeight;
+    }
+
+    function handleFile(file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        base64Image = event.target.result;
+        imagePreview.src = base64Image;
+        previewContainer.style.display = 'block';
+        document.getElementById('dropzoneText').innerText = `Fichier chargé : ${file.name}`;
+        checkFormValidity();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function checkFormValidity() {
+      if (base64Image && promptInput.value.trim() !== "" && hfTokenInput.value.trim() !== "") {
+        processBtn.disabled = false;
+      } else {
+        processBtn.disabled = true;
+      }
+    }
+
+    [promptInput, hfTokenInput].forEach(input => {
+      input.addEventListener('input', checkFormValidity);
+    });
+
+    // Appel à l'API via le nouveau Proxy Vercel
+    async function callHfWithRetry(dataUrl, instruction, token, retries = 2) {
+      for (let i = 0; i <= retries; i++) {
+        try {
+          log(`Tentative ${i + 1}/${retries + 1}...`);
+          
+          // Route modifiée pour pointer vers l'API Vercel (/api/hf-proxy)
+          const resp = await fetch('/api/hf-proxy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              image: dataUrl, 
+              prompt: instruction, 
+              token: token 
+            })
+          });
+
+          if (!resp.ok) {
+            const errBody = await resp.text();
+            throw new Error(errBody || `Code erreur serveur: ${resp.status}`);
+          }
+
+          const blob = await resp.blob();
+          return URL.createObjectURL(blob);
+
+        } catch (err) {
+          log(`Échec : ${err.message}`);
+          if (i === retries) throw err;
+          log("Attente avant nouvelle tentative...");
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    // Déclenchement du traitement
+    processBtn.addEventListener('click', async () => {
+      const prompt = promptInput.value.trim();
+      const token = hfTokenInput.value.trim();
+
+      if (!base64Image || !prompt || !token) return;
+
+      processBtn.disabled = true;
+      statusLog.innerHTML = "";
+      log("Initialisation de la requête...");
+
+      try {
+        const resultUrl = await callHfWithRetry(base64Image, prompt, token);
+        log("Transformation réussie ! Affichage de l'image.");
+        imagePreview.src = resultUrl;
+      } catch (err) {
+        log(`Erreur critique : ${err.message}`);
+      } finally {
+        processBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
